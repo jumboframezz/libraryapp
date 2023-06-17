@@ -21,13 +21,13 @@ resource "random_integer" "ri" {
 
 # Create a resource group
 resource "azurerm_resource_group" "rg" {
-  name     = "${var.su_username}${var.resource_group_name}-${random_integer.ri.result}"
-  location = resource_group_location
+  name     = "${var.resource_group_name}-${random_integer.ri.result}"
+  location = "${var.resource_group_location}"
 }
 
 # Create service plan
 resource "azurerm_service_plan" "sp" {
-  name                = "${app_service_plan_name}-${random_integer.ri.result}"
+  name                = "${var.app_service_plan_name}-${random_integer.ri.result}"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   os_type             = "Linux"
@@ -35,8 +35,8 @@ resource "azurerm_service_plan" "sp" {
 }
 
 # Define web app
-resource "azurerm_linux_web_app" "task_board_app" {
-  name                = "${app_service_plan}-${random_integer.ri.result}"
+resource "azurerm_linux_web_app" "library_app" {
+  name                = "${var.app_service_plan}-${random_integer.ri.result}"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   service_plan_id     = azurerm_service_plan.sp.id
@@ -55,17 +55,17 @@ resource "azurerm_linux_web_app" "task_board_app" {
 
 # Create the SQL server
 resource "azurerm_mssql_server" "sqlserver" {
-  name                         = "${sql_server_name}-${random_integer.ri.result}"
+  name                         = "${var.sql_server_name}-${random_integer.ri.result}"
   resource_group_name          = azurerm_resource_group.rg.name
   location                     = azurerm_resource_group.rg.location
   version                      = "12.0"
-  administrator_login          = sql_admin_login
-  administrator_login_password = sql_admin_password
+  administrator_login          = "${var.sql_admin_login}"
+  administrator_login_password = "${var.sql_admin_password}"
 }
 
 # Create database
 resource "azurerm_mssql_database" "sql" {
-  name         = "${sql_database_name}-${random_integer.ri.result}"
+  name         = "${var.sql_database_name}-${random_integer.ri.result}"
   server_id    = azurerm_mssql_server.sqlserver.id
   license_type = "LicenseIncluded"
   sku_name     = "S0"
@@ -73,7 +73,7 @@ resource "azurerm_mssql_database" "sql" {
 
 # Set firewall rule
 resource "azurerm_mssql_firewall_rule" "sql_firewall" {
-  name             = "${firewall_rule_name}-${random_integer.ri.result}"
+  name             = "${var.firewall_rule_name}-${random_integer.ri.result}"
   server_id        = azurerm_mssql_server.sqlserver.id
   start_ip_address = "0.0.0.0"
   end_ip_address   = "0.0.0.0"
@@ -81,8 +81,8 @@ resource "azurerm_mssql_firewall_rule" "sql_firewall" {
 
 # Set source for code
 resource "azurerm_app_service_source_control" "git" {
-  app_id                 = azurerm_linux_web_app.task_board_app.id
-  repo_url               = repo_URL
+  app_id                 = azurerm_linux_web_app.library_app.id
+  repo_url               = "${var.repo_URL}"
   branch                 = "main"
   use_manual_integration = true
 }
